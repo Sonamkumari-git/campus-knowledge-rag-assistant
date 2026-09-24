@@ -141,6 +141,16 @@ CAMPUS_ENABLE_LLM=false  # use deterministic grounded fallback only
 
 When the LLM helper fails or returns empty content, the server automatically uses the grounded fallback built from retrieved source text. This keeps the preview usable and avoids confident unsupported answers.
 
+## Login, account creation, and logout
+
+Authentication uses the scaffold's secure Manus OAuth flow rather than a home-grown password form. This means the application never stores a plaintext password and never exposes an OAuth secret in the browser.
+
+The header's **Sign in** and **Create account** actions both start the official account portal through the nonce-protected `startLogin()` helper. New users can choose the portal's registration option, complete account creation there, and return to the application through the verified callback. Existing users can sign in with the same flow.
+
+After login, the header displays the current account name. Selecting that account control calls the server-side `auth.logout` mutation, clears the session cookie, clears the preview token, invalidates the cached user query, and returns the UI to the signed-out state. The Documents and Admin routes also have a client-side session gate so a signed-out user receives a clear sign-in prompt instead of a broken page.
+
+For production, keep the provider's allowed redirect origin aligned with the deployed site and require HTTPS. Browsers that block secure cookies or third-party tracking protections may prevent OAuth sessions from completing.
+
 ## How the current RAG loop works
 
 1. The user submits a question to the typed `chat.ask` procedure.
