@@ -12,7 +12,7 @@ The seeded corpus is deliberately labelled as demonstration data. Replace or ext
 
 ## Important implementation note
 
-The supplied design brief requested Python/FastAPI/Vanilla JavaScript. This hosted WebDev deployment uses the platform's supported full-stack scaffold: React 19 + TypeScript on the client, Express/tRPC on the server, Drizzle/MySQL for the application platform, and the platform's server-side LLM helper. The product boundaries remain the same: frontend secrets are not exposed, retrieval and generation stay server-side, the vector/search layer is isolated behind service functions, and the UI is responsive and accessible.
+The supplied design brief requested Python/FastAPI/Vanilla JavaScript. This deployment uses a supported full-stack implementation: React 19 + TypeScript on the client, Express/tRPC on the server, MongoDB for user persistence, and the platform's server-side LLM helper. The product boundaries remain the same: frontend secrets are not exposed, retrieval and generation stay server-side, the vector/search layer is isolated behind service functions, and the UI is responsive and accessible.
 
 If a standalone Python service is required for a self-hosted deployment, the `server/campusData.ts` interfaces map directly to the planned Python modules: loader, cleaner, chunker, embeddings, retriever, generator, and pipeline. The architecture plan is available at `/home/ubuntu/campus-rag-phase1-architecture.md` in the working environment.
 
@@ -65,7 +65,7 @@ The retrieval service is intentionally kept in `server/campusData.ts`. It contai
 | UI | Lucide icons, Streamdown answer rendering, responsive CSS |
 | Server | Express, tRPC 11, Zod validation |
 | Auth | Manus OAuth/session scaffold with role support from the platform template |
-| Data platform | Drizzle + MySQL/TiDB scaffold |
+| Data platform | MongoDB Node.js driver; users are stored in the `users` collection |
 | Generation | Server-side `invokeLLM` using a configurable platform model, with a grounded deterministic fallback |
 | Retrieval | Transparent seeded corpus now; FAISS/Hugging Face adapter can replace it for standalone deployment |
 | Validation | Vitest, TypeScript compiler, Vite/esbuild production build |
@@ -93,7 +93,6 @@ campus-knowledge-ai/
 │   ├── rag.test.ts
 │   ├── db.ts
 │   └── _core/
-├── drizzle/
 ├── shared/
 ├── README.md
 └── package.json
@@ -124,13 +123,12 @@ pnpm dev
 If pnpm is not installed, install Node.js first and then run:
 
 ```powershell
-corepack enable
-corepack prepare pnpm@10.4.1 --activate
+npm install --global pnpm@10.4.1
 ```
 
 ## Environment configuration
 
-The platform scaffold injects server-side credentials for the database, authentication, storage, and built-in LLM. Do not commit `.env` files or put secrets in the client.
+Set server-side credentials for MongoDB, authentication, storage, and the built-in LLM in the deployment environment. Do not commit `.env` files or put secrets in the client.
 
 The current chat procedure uses `CAMPUS_ENABLE_LLM` as an optional switch:
 
@@ -233,7 +231,7 @@ Measure retrieval hit rate, context relevance, answer relevance, groundedness, c
 
 ## Deployment notes
 
-The project is initialized for the managed WebDev deployment path. Save a checkpoint before publishing. The runtime is a single Node process with request-bounded work, which matches the current demo retrieval and server-side generation flow. Large document indexing should move to a durable background-capable worker or a bounded upload pipeline before high-volume deployment.
+The project can deploy to Render as a Node Web Service. Use `pnpm install --frozen-lockfile && pnpm build` as the build command and `pnpm start` as the start command; do not run `corepack enable` because Render's filesystem is read-only. Set `MONGODB_URI`, `MONGODB_DB_NAME`, `JWT_SECRET`, the OAuth variables, and the built-in API variables in Render's Environment settings. The runtime is a single Node process with request-bounded work, which matches the current demo retrieval and server-side generation flow. Large document indexing should move to a durable background-capable worker or a bounded upload pipeline before high-volume deployment.
 
 For a standalone self-hosted version, use the architecture document and implement the Python modules described there with FastAPI, Pydantic, Hugging Face embeddings, FAISS, an application database, and a separately served static frontend. Keep the same response contract so the current UI can be adapted without changing its user experience.
 
