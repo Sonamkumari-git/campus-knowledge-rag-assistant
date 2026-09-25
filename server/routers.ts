@@ -4,7 +4,9 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
-import { buildGroundedFallback, campusSources, categoryOptions, retrieveChunks } from "./campusData";
+import { buildGroundedFallback, campusSources, categoryOptions, retrieveChunks, addUploadedPdf } from "./campusData";
+import { protectedProcedure } from "./_core/trpc";
+import pdfParse from "pdf-parse/lib/pdf-parse.js";
 
 const questionLog: Array<{ question: string; createdAt: string; resultCount: number }> = [
   { question: "What are the attendance requirements?", createdAt: "Today, 10:42 AM", resultCount: 1 },
@@ -77,6 +79,10 @@ export const appRouter = router({
       });
     }),
     search: publicProcedure.input(z.object({ query: z.string().min(2), category: z.string().optional() })).query(({ input }) => retrieveChunks(input.query, input.category)),
+    uploadPdf: protectedProcedure.input(z.object({ fileName: z.string().min(1).max(180), data: z.string().min(100).max(18_000_000) })).mutation(async ({ input }) => {
+      const pdf = await pdfParse(Buffer.from(input.data, "base64"));
+      return addUploadedPdf(input.fileName, pdf.text, pdf.numpages);
+    }),
   }),
   chat: router({
     ask: publicProcedure.input(z.object({ question: z.string().min(3).max(1000), history: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() })).max(8).optional() })).mutation(async ({ input }) => {

@@ -97,6 +97,33 @@ export const campusSources: CampusSource[] = [
   },
 ];
 
+export function addUploadedPdf(documentName: string, text: string, pageCount = 1) {
+  const cleanText = text.replace(/\s+/g, " ").trim();
+  if (cleanText.length < 20) throw new Error("This PDF does not contain enough readable text to index.");
+  const chunkSize = 850;
+  const chunks = Math.ceil(cleanText.length / chunkSize);
+  const now = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  const created: CampusSource[] = [];
+  for (let index = 0; index < chunks; index += 1) {
+    const content = cleanText.slice(index * chunkSize, (index + 1) * chunkSize);
+    created.push({
+      id: `upload-${Date.now()}-${index}`,
+      documentName,
+      category: "Uploaded PDF",
+      page: Math.min(pageCount, Math.floor(index * pageCount / chunks) + 1),
+      section: `Uploaded PDF section ${index + 1}`,
+      uploaded: now,
+      version: "uploaded",
+      status: "Indexed",
+      chunks: 1,
+      excerpt: content.slice(0, 220),
+      content,
+    });
+  }
+  campusSources.push(...created);
+  return { documentName, chunks: created.length, pageCount };
+}
+
 const stopWords = new Set(["what", "when", "where", "how", "can", "the", "for", "are", "is", "about", "and", "with", "from", "does", "this", "that", "must", "should", "new", "course"]);
 
 function terms(query: string) {

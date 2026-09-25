@@ -15,6 +15,10 @@ export { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 export const startLogin = () => {
   const oauthPortalUrl = import.meta.env.VITE_OAUTH_PORTAL_URL;
   const appId = import.meta.env.VITE_APP_ID;
+  if (!oauthPortalUrl || !appId) {
+    window.alert("Account sign-in is not configured yet. Add VITE_OAUTH_PORTAL_URL and VITE_APP_ID in Render Environment, then redeploy.");
+    return;
+  }
   const redirectUri = `${window.location.origin}/api/oauth/callback`;
 
   const nonce = crypto.randomUUID();
