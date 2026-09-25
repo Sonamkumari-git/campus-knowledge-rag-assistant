@@ -16,10 +16,12 @@ services:
         value: campus_knowledge_ai
       - key: JWT_SECRET
         sync: false
-      - key: VITE_APP_ID
+      - key: GOOGLE_CLIENT_ID
         sync: false
-      - key: VITE_OAUTH_PORTAL_URL
+      - key: GOOGLE_CLIENT_SECRET
         sync: false
+      - key: GOOGLE_REDIRECT_URI
+        value: https://campus-knowledge-ai.onrender.com/api/oauth/callback
       - key: OAUTH_SERVER_URL
         sync: false
       - key: OWNER_OPEN_ID
