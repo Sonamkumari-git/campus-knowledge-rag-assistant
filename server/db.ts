@@ -73,8 +73,8 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   }
 
   const now = new Date();
-  const set: Partial<MongoUserDocument> = { updatedAt: now };
-  for (const field of ["name", "email", "loginMethod", "lastSignedIn"] as const) {
+  const set: Partial<MongoUserDocument> = { updatedAt: now, lastSignedIn: user.lastSignedIn ?? now };
+  for (const field of ["name", "email", "loginMethod"] as const) {
     if (user[field] !== undefined) set[field] = user[field] as never;
   }
   if (user.role !== undefined) set.role = user.role;
@@ -87,7 +87,6 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       $setOnInsert: {
         openId: user.openId,
         createdAt: user.createdAt ?? now,
-        lastSignedIn: user.lastSignedIn ?? now,
         role: user.role ?? (user.openId === ENV.ownerOpenId ? "admin" : "user"),
       },
     },
