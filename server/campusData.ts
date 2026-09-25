@@ -96,6 +96,7 @@ export const campusSources: CampusSource[] = [
     content: "Undergraduate students may borrow up to four books for fourteen days. An item can be renewed once if it has not been reserved by another reader.",
   },
 ];
+let latestUploadedDocumentName: string | null = null;
 
 export function addUploadedPdf(documentName: string, text: string, pageCount = 1) {
   const cleanText = text.replace(/\s+/g, " ").trim();
@@ -121,10 +122,11 @@ export function addUploadedPdf(documentName: string, text: string, pageCount = 1
     });
   }
   campusSources.push(...created);
+  latestUploadedDocumentName = documentName;
   return { documentName, chunks: created.length, pageCount };
 }
 
-const stopWords = new Set(["what", "when", "where", "how", "can", "the", "for", "are", "is", "about", "and", "with", "from", "does", "this", "that", "must", "should", "new", "course"]);
+const stopWords = new Set(["what", "when", "where", "how", "can", "the", "for", "are", "is", "about", "and", "with", "from", "does", "this", "that", "must", "should", "new", "course", "pdf", "batao", "ye", "ky", "kya", "ki", "ka", "ke", "hai", "chij", "cheeze", "par", "pe", "iske"]);
 
 function terms(query: string) {
   return query
@@ -136,13 +138,20 @@ function terms(query: string) {
 
 export function retrieveChunks(query: string, category?: string): RetrievalResult[] {
   const queryTerms = terms(query);
+  if (!queryTerms.length && latestUploadedDocumentName && !category) {
+    return campusSources
+      .filter(source => source.documentName === latestUploadedDocumentName)
+      .map(source => ({ ...source, score: 0.95 }))
+      .slice(0, 4);
+  }
   return campusSources
     .filter(source => !category || source.category === category)
     .map(source => {
-      const haystack = `${source.documentName} ${source.category} ${source.section} ${source.content}`.toLowerCase();
-      const matched = queryTerms.filter(term => new RegExp(`\\b${term}\\b`).test(haystack));
+      const haystack = `${source.documentName.replace(/\.pdf$/i, "")} ${source.category} ${source.section} ${source.content}`.toLowerCase();
+      const matched = queryTerms.filter(term => new RegExp("\\b" + term + "\\b").test(haystack));
       const phraseBonus = haystack.includes(query.toLowerCase().trim()) ? 0.18 : 0;
-      const score = Math.min(0.99, 0.45 + matched.length * 0.1 + phraseBonus);
+      const uploadBonus = source.category === "Uploaded PDF" && source.documentName === latestUploadedDocumentName ? 0.12 : 0;
+      const score = Math.min(0.99, 0.45 + matched.length * 0.1 + phraseBonus + uploadBonus);
       return { ...source, score: matched.length ? score : 0.08 };
     })
     .filter(source => source.score >= 0.5)

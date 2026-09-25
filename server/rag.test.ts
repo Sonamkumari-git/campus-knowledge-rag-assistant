@@ -25,4 +25,11 @@ describe("campus retrieval", () => {
     const results = retrieveChunks("When must visitors sign in at the residence desk after 8 PM?");
     expect(results.some(result => result.documentName === "Student Conduct Upload Test.pdf")).toBe(true);
   });
+
+  it("uses the latest uploaded PDF for a generic PDF question", () => {
+    addUploadedPdf("Resume Upload Test.pdf", "This resume belongs to Asha Sharma. She is a frontend developer with React and TypeScript experience.", 1);
+    const results = retrieveChunks("batao ye pdf ky chij pe hai");
+    expect(results.length).toBeGreaterThan(0);
+    expect(results.every(result => result.documentName === "Resume Upload Test.pdf")).toBe(true);
+  });
 });
