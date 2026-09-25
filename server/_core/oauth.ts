@@ -74,7 +74,9 @@ export function registerOAuthRoutes(app: Express) {
     res.clearCookie(OAUTH_STATE_COOKIE, { ...getSessionCookieOptions(req), httpOnly: true });
 
     try {
-      if (!isGoogleConfigured()) throw new Error("Google OAuth is not configured");
+      if (!isGoogleConfigured()) throw new Error("GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET is missing");
+      if (!ENV.cookieSecret) throw new Error("JWT_SECRET is missing");
+      if (!ENV.mongodbUri) throw new Error("MONGODB_URI is missing");
       const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
         method: "POST",
         headers: { "content-type": "application/x-www-form-urlencoded" },
@@ -86,14 +88,17 @@ export function registerOAuthRoutes(app: Express) {
           grant_type: "authorization_code",
         }),
       });
-      if (!tokenResponse.ok) throw new Error(`Google token exchange failed (${tokenResponse.status})`);
-      const tokens = (await tokenResponse.json()) as { access_token?: string };
+      const tokenPayload = (await tokenResponse.json()) as { access_token?: string; error?: string; error_description?: string };
+      if (!tokenResponse.ok) {
+        throw new Error(`Google token exchange failed: ${tokenPayload.error_description || tokenPayload.error || `HTTP ${tokenResponse.status}`}`);
+      }
+      const tokens = tokenPayload;
       if (!tokens.access_token) throw new Error("Google did not return an access token");
 
       const profileResponse = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
         headers: { authorization: `Bearer ${tokens.access_token}` },
       });
-      if (!profileResponse.ok) throw new Error(`Google profile request failed (${profileResponse.status})`);
+      if (!profileResponse.ok) throw new Error(`Google profile request failed (HTTP ${profileResponse.status})`);
       const profile = (await profileResponse.json()) as { sub?: string; email?: string; name?: string };
       if (!profile.sub || !profile.email) throw new Error("Google profile is missing a user id or email");
       const openId = `google:${profile.sub}`;
@@ -117,7 +122,8 @@ export function registerOAuthRoutes(app: Express) {
       res.redirect(302, "/");
     } catch (error) {
       console.error("[Google OAuth] Callback failed", error);
-      res.status(500).send("Google sign-in failed. Check the Render OAuth environment variables and redirect URI.");
+      const message = error instanceof Error ? error.message : "Unknown OAuth error";
+      res.status(500).send(`Google sign-in failed: ${message}. Check Render environment variables and Google redirect URI.`);
     }
   });
 }
